@@ -188,20 +188,68 @@ const public_Register_post = async (req, res) => {
   let quizesInfo = [];
   let videosInfo = [];
 
-  if (Grade === 'Grade1') {
-    await User.findOne({ Code: 755213 }).then((result) => {
-      quizesInfo = result.quizesInfo;
-      videosInfo = result.videosInfo;
-    });
-  } else if (Grade === 'Grade2') {
-    await User.findOne({ Code: 982142 }).then((result) => {
-      quizesInfo = result.quizesInfo;
-      videosInfo = result.videosInfo;
-    });
-  } else if (Grade === 'Grade3') {
-    await User.findOne({ Code: 865795 }).then((result) => {
-      quizesInfo = result.quizesInfo;
-      videosInfo = result.videosInfo;
+  // Get all chapters for the student's grade
+  const chapters = await Chapter.find({ chapterGrade: Grade }).lean();
+  
+  // Initialize videosInfo array
+  videosInfo = [];
+  
+  // Process each chapter to get all videos
+  for (const chapter of chapters) {
+    // Get all videos from the chapter
+    const allVideos = [
+      ...(chapter.chapterLectures || []),
+      ...(chapter.chapterSummaries || []),
+      ...(chapter.chapterSolvings || [])
+    ];
+    
+    // Add each video to the videosInfo array
+    for (const video of allVideos) {
+      videosInfo.push({
+        _id: video._id,
+        videoName: video.videoName || video.lectureName,
+        chapterId: chapter._id,
+        videoType: video.videoType || 'lecture',
+        fristWatch: null,
+        lastWatch: null,
+        videoAllowedAttemps: 10,
+        numberOfWatches: 0,
+        videoPurchaseStatus: false,
+        purchaseDate: null,
+        purchaseCode: null,
+        isUserEnterQuiz: false,
+        isHWIsUploaded: false,
+        isUserUploadPerviousHWAndApproved: false,
+        prerequisites: video.prerequisites || 'none',
+        accessibleAfterViewing: null
+      });
+    }
+  }
+  
+  // Get all quizzes for the student's grade
+  const Quiz = require('../models/Quiz');
+  const quizzes = await Quiz.find({ Grade: Grade }).lean();
+  
+  // Initialize quizesInfo array
+  quizesInfo = [];
+  
+  // Process each quiz to populate quizesInfo
+  for (const quiz of quizzes) {
+    quizesInfo.push({
+      _id: quiz._id,
+      quizName: quiz.quizName,
+      chapterId: quiz.chapterId,
+      isEnterd: false,
+      inProgress: false,
+      Score: 0,
+      answers: [],
+      randomQuestionIndices: [],
+      quizPurchaseStatus: false,
+      purchaseDate: null,
+      purchaseCode: null,
+      startTime: null,
+      endTime: null,
+      solvedAt: null
     });
   }
 
